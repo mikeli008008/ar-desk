@@ -28,6 +28,18 @@ GitHub Actions：把 repo push 上去，在 Settings → Secrets 加
 `TELEGRAM_BOT_TOKEN` 和 `TELEGRAM_CHAT_ID`，工作流已经挂好 13:20 和 14:20 UTC
 两个 cron（夏令时/冬令时各一个），脚本内部用美东时间自己判断该不该跑。
 
+## GitHub Actions setup
+
+Workflow file lives at [`docs/github-workflows/daily-brief.yml`](docs/github-workflows/daily-brief.yml) until the repo token has `workflow` scope.
+
+To enable:
+1. Copy that file to `.github/workflows/daily-brief.yml` in the GitHub UI (or re-auth `gh` with `workflow` scope and we move it).
+2. Settings → Secrets and variables → Actions → add:
+   - `TELEGRAM_BOT_TOKEN`
+   - `TELEGRAM_CHAT_ID`
+3. Actions → AR-Desk Daily Brief → Run workflow (`force`) once to test.
+
+
 ## 结构
 
 ```
