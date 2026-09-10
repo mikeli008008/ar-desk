@@ -1,0 +1,45 @@
+name: AR-Desk Daily Brief
+
+on:
+  schedule:
+    # 13:20 UTC = 09:20 EDT / 14:20 UTC = 09:20 EST
+    - cron: '20 13 * * 1-5'
+    - cron: '20 14 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: '忽略时间窗口强制运行'
+        type: boolean
+        default: true
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Run brief
+        env:
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: python main.py ${{ (github.event_name == 'workflow_dispatch' && '--force') || '' }}
+      - name: Commit brief + journal
+        run: |
+          git config user.name  "ar-desk-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add out data || true
+          git diff --staged --quiet || git commit -m "brief $(date -u +%F)"
+          git push || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brief
+          path: out/
+          if-no-files-found: ignore
+
