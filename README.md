@@ -1,7 +1,7 @@
 # AR-Desk
 
 NQ/MNQ 日内盘前决策辅助系统。每个交易日美东 09:20 自动运行一次，产出一份带
-**日型分类 / 入场区 / 目标位阶梯 / 不做条件 / 仓位 / 收工规则** 的盘前简报，推送到 Telegram。
+**日型分类 / 入场区 / 目标位阶梯 / 不做条件 / 仓位 / 收工规则** 的盘前简报，推送到邮箱（默认 beijingzidane@gmail.com）。
 
 ## 这套东西的定位
 
@@ -24,9 +24,10 @@ python main.py --date 2026-09-02    # 复盘某一天
 python main.py --stats              # 按日型看历史表现
 ```
 
-GitHub Actions：把 repo push 上去，在 Settings → Secrets 加
-`TELEGRAM_BOT_TOKEN` 和 `TELEGRAM_CHAT_ID`，工作流已经挂好 13:20 和 14:20 UTC
-两个 cron（夏令时/冬令时各一个），脚本内部用美东时间自己判断该不该跑。
+GitHub Actions：Settings → Secrets 加
+`GMAIL_APP_PASSWORD`（Google 应用专用密码），可选 `EMAIL_TO` / `EMAIL_FROM`
+（默认 beijingzidane@gmail.com）。工作流 cron 13:20 / 14:20 UTC（对应美东 09:20），
+脚本内部用美东时间判断该不该跑。**每日 email 简报。**
 
 ## GitHub Actions setup
 
@@ -35,9 +36,9 @@ Workflow file lives at [`docs/github-workflows/daily-brief.yml`](docs/github-wor
 To enable:
 1. Copy that file to `.github/workflows/daily-brief.yml` in the GitHub UI (or re-auth `gh` with `workflow` scope and we move it).
 2. Settings → Secrets and variables → Actions → add:
-   - `TELEGRAM_BOT_TOKEN`
-   - `TELEGRAM_CHAT_ID`
-3. Actions → AR-Desk Daily Brief → Run workflow (`force`) once to test.
+   - `GMAIL_APP_PASSWORD` (required)
+   - `EMAIL_TO` / `EMAIL_FROM` (optional; default beijingzidane@gmail.com)
+3. Actions → AR-Desk Daily Brief → Run workflow (`force`) once to test email delivery.
 
 
 ## 结构

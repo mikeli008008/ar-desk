@@ -95,7 +95,9 @@ def main() -> int:
     print(md)
 
     journal.log_plan(cfg["output"]["journal"], ctx)
-    if cfg["output"].get("telegram"):
+    if cfg["output"].get("email", True):
+        journal.email(f"AR-Desk brief {ctx['date']} · {ctx['verdict']}", md)
+    elif cfg["output"].get("telegram"):
         journal.telegram(md)
     return 0
 

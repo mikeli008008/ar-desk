@@ -55,4 +55,6 @@ gex:
 output:
   dir: "out"
   journal: "data/journal.csv"
-  telegram: true
+  telegram: false
+  email: true
+  email_to: "beijingzidane@gmail.com"   # daily delivery target

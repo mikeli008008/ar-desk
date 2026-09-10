@@ -59,6 +59,37 @@ def stats(path: str) -> str:
     return "\n".join(lines)
 
 
+
+
+def email(subject: str, body: str) -> bool:
+    """Send daily brief via Gmail SMTP. Needs GMAIL_APP_PASSWORD (or SMTP_PASSWORD)."""
+    import smtplib
+    from email.mime.text import MIMEText
+
+    to_addr = os.getenv("EMAIL_TO") or os.getenv("AR_DESK_EMAIL_TO") or "beijingzidane@gmail.com"
+    from_addr = os.getenv("EMAIL_FROM") or to_addr
+    password = os.getenv("GMAIL_APP_PASSWORD") or os.getenv("SMTP_PASSWORD")
+    host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    port = int(os.getenv("SMTP_PORT", "587"))
+    if not password:
+        print("[email] skip — set GMAIL_APP_PASSWORD (Google App Password)")
+        return False
+    msg = MIMEText(body, "plain", "utf-8")
+    msg["Subject"] = subject
+    msg["From"] = from_addr
+    msg["To"] = to_addr
+    try:
+        with smtplib.SMTP(host, port, timeout=30) as s:
+            s.starttls()
+            s.login(from_addr, password)
+            s.sendmail(from_addr, [to_addr], msg.as_string())
+        print(f"[email] sent to {to_addr}")
+        return True
+    except Exception as e:
+        print(f"[email] failed: {e}")
+        return False
+
+
 def telegram(text: str) -> bool:
     token, chat = os.getenv("TELEGRAM_BOT_TOKEN"), os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat:
