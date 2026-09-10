@@ -1,0 +1,58 @@
+# AR-Desk 配置 —— Auction Resolution 日内决策辅助系统
+# 所有阈值都可改；改完立刻生效，不需要动代码。
+
+symbol:
+  futures: "NQ=F"        # 数据源合约（yfinance 连续合约）
+  proxy_etf: "QQQ"       # 用于 naive GEX 的期权标的
+  index: "^NDX"
+  point_value_mnq: 2.0   # MNQ 每点 $2
+  point_value_nq: 20.0   # NQ 每点 $20
+
+sessions:                # 全部为美东时间 (ET)
+  asia_start: "18:00"    # 前一日
+  asia_end: "03:00"
+  london_start: "03:00"
+  london_end: "09:30"
+  ny_start: "09:30"
+  ny_hard_stop: "11:00"  # 硬性收工时间
+
+classification:
+  # 伦敦盘扫掉亚洲区间后收回多少比例算“假突破 / 反转燃料”
+  reclaim_threshold: 0.5     # 收回到亚洲区间内 >= 50% 区间深度
+  # 压缩日判定：伦敦区间 < 近 20 日平均日内真实波幅的比例
+  compression_atr_ratio: 0.35
+  # 单边日判定：伦敦收盘在亚洲区间外，且离区间边缘 > 该比例的亚洲区间宽度
+  trend_break_ratio: 0.5
+
+entry:
+  fib_shallow: 0.705     # 折价/溢价区上沿
+  fib_deep: 0.886        # 失效线：跌破/升破即不做
+  require_zone_outside_value: true
+
+filters:
+  min_5m_volume_mnq: 20000     # 5 分钟 K 线参与度门槛（盘中人工/脚本确认）
+  news_blackout_minutes: 35    # 8:30 / 10:00 数据后静默分钟数
+  skip_if_target_hit_premarket: true
+  skip_on_rotation_day: false  # false = 减半仓，true = 直接不做
+  skip_on_compression_day: true
+
+risk:
+  account_size: 50000
+  risk_per_trade_pct: 0.6      # 单笔风险占账户比例
+  max_daily_loss_pct: 2.0      # 当日亏损上限
+  max_consecutive_losses: 2    # 连亏 N 笔当天收工
+  max_trades_per_day: 3
+  min_rr: 1.5                  # 目标位距离/止损距离 低于此值不下单
+  target_rr_cap: 2.5           # 超过这个 R 不额外加码期待值
+  no_adds_to_losers: true
+
+gex:
+  source: "file"               # file = 优先读你自己的 gex repo 输出；读不到自动回退 yfinance
+  file_path: "data/gex_latest.json"   # 若接你自己的 gex repo 输出
+  positive_gamma_note: "压波动：假突破多，优先做区间回归，不追破位"
+  negative_gamma_note: "放大波动：允许顺势延伸，目标位可放远"
+
+output:
+  dir: "out"
+  journal: "data/journal.csv"
+  telegram: true
