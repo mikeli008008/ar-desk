@@ -2,10 +2,9 @@ name: AR-Desk Daily Brief
 
 on:
   schedule:
-    # GitHub cron is often late. Always --force on schedule so a delayed
-    # runner still emails. Two crons cover EDT (13:20) and EST (14:20).
-    - cron: '20 13 * * 1-5'
-    - cron: '20 14 * * 1-5'
+    # One cron only (EDT 09:25). For EST winters, switch to: '25 14 * * 1-5'
+    # --once prevents a delayed/duplicate schedule from emailing twice.
+    - cron: '25 13 * * 1-5'
   workflow_dispatch:
     inputs:
       force:
@@ -30,10 +29,10 @@ jobs:
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-        # schedule always --force (cron delay past 09:35 ET used to skip)
-        # workflow_dispatch respects the force input
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.force }}" = "true" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            python main.py --force --once
+          elif [ "${{ inputs.force }}" = "true" ]; then
             python main.py --force
           else
             python main.py
