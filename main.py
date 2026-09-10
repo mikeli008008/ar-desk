@@ -29,6 +29,8 @@ def in_window(now: datetime) -> bool:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--once", action="store_true",
+                    help="Skip if today's brief already exists (schedule dedupe)")
     ap.add_argument("--date")
     ap.add_argument("--stats", action="store_true")
     ap.add_argument("--config", default="config.yaml")
@@ -47,6 +49,12 @@ def main() -> int:
         return 0
 
     today = datetime.strptime(args.date, "%Y-%m-%d").replace(tzinfo=ET) if args.date else now
+    date_str = today.strftime("%Y-%m-%d")
+    outdir = cfg["output"]["dir"]
+    stem = f"{outdir}/brief_{date_str}"
+    if args.once and os.path.exists(f"{stem}.md"):
+        print(f"[skip] brief for {date_str} already exists ({stem}.md) — once-per-day")
+        return 0
 
     # --- 数据 ---
     bars5 = D.get_bars(cfg["symbol"]["futures"], "5m", "10d")
@@ -83,10 +91,8 @@ def main() -> int:
     }
 
     # --- 输出 ---
-    outdir = cfg["output"]["dir"]
     os.makedirs(outdir, exist_ok=True)
     md = brief.render(ctx)
-    stem = f"{outdir}/brief_{ctx['date']}"
     with open(f"{stem}.md", "w", encoding="utf-8") as f:
         f.write(md)
     with open(f"{stem}.json", "w", encoding="utf-8") as f:
