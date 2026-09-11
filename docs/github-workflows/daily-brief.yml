@@ -2,9 +2,11 @@ name: AR-Desk Daily Brief
 
 on:
   schedule:
-    # One cron only (EDT 09:25). For EST winters, switch to: '25 14 * * 1-5'
-    # --once prevents a delayed/duplicate schedule from emailing twice.
-    - cron: '25 13 * * 1-5'
+    # GitHub cron is often 5–40+ min late. Primary early + backup; --once dedupes.
+    # EDT: 13:05 UTC = 09:05 ET, 13:40 UTC = 09:40 ET
+    # EST winters: change both to 14:xx (add 1 hour)
+    - cron: '5 13 * * 1-5'
+    - cron: '40 13 * * 1-5'
   workflow_dispatch:
     inputs:
       force:
