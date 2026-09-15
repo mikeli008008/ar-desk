@@ -1,53 +1,67 @@
 name: AR-Desk Daily Brief
 
 on:
-  schedule:
-    # GitHub cron is often 5–40+ min late. Primary early + backup; --once dedupes.
-    # EDT: 13:05 UTC = 09:05 ET, 13:40 UTC = 09:40 ET
-    # EST winters: change both to 14:xx (add 1 hour)
-    - cron: '5 13 * * 1-5'
-    - cron: '40 13 * * 1-5'
-  workflow_dispatch:
-    inputs:
-      force:
-        description: '忽略时间窗口强制运行'
-        type: boolean
-        default: true
+  # Primary trigger: Grok routine at 09:05 America/Toronto (workflow_dispatch).
+    # GitHub schedule is backup only — often hours late; cache dedupe prevents doubles.
+      schedule:
+          - cron: '5 13 * * 1-5'   # ~09:05 ET intended; may lag
+              - cron: '40 13 * * 1-5'  # backup same morning window
+                workflow_dispatch:
+                    inputs:
+                          force:
+                                  description: 'Force send even if already emailed today'
+                                          type: boolean
+                                                  default: false
 
-jobs:
-  brief:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-      - run: pip install -r requirements.txt
-      - name: Run brief
-        env:
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-        run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            python main.py --force --once
-          elif [ "${{ inputs.force }}" = "true" ]; then
-            python main.py --force
-          else
-            python main.py
-          fi
-      - name: Commit brief + journal
-        run: |
-          git config user.name  "ar-desk-bot"
-          git config user.email "bot@users.noreply.github.com"
-          git add out data || true
-          git diff --staged --quiet || git commit -m "brief $(date -u +%F)"
-          git push || true
-      - uses: actions/upload-artifact@v4
-        with:
-          name: brief
-          path: out/
-          if-no-files-found: ignore
+                                                  concurrency:
+                                                    group: ar-desk-brief-daily
+                                                      cancel-in-progress: false
+
+                                                      jobs:
+                                                        brief:
+                                                            runs-on: ubuntu-latest
+                                                                permissions:
+                                                                      contents: write
+                                                                          steps:
+                                                                                - uses: actions/checkout@v4
+
+                                                                                      - name: Today (America/New_York)
+                                                                                              id: day
+                                                                                                      run: echo "d=$(TZ=America/New_York date +%F)" >> "$GITHUB_OUTPUT"
+                                                                                                      
+                                                                                                            - name: Once-per-day cache
+                                                                                                                    id: sent
+                                                                                                                            uses: actions/cache@v4
+                                                                                                                                    with:
+                                                                                                                                              path: .ar-desk-sent
+                                                                                                                                                        key: ar-desk-sent-${{ steps.day.outputs.d }}
+                                                                                                                                                        
+                                                                                                                                                              - name: Decide whether to send      - uses: actions/setup-python@v5
+                                                                                                                                                                      if: steps.gate.outputs.run == 'true'
+                                                                                                                                                                              with:
+                                                                                                                                                                                        python-version: '3.11'
+                                                                                                                                                                                                  cache: 'pip'
+                                                                                                                                                                                                  
+                                                                                                                                                                                                        - name: Install deps
+                                                                                                                                                                                                                if: steps.gate.outputs.run == 'true'
+                                                                                                                                                                                                                        run: pip install -r requirements.txt
+                                                                                                                                                                                                                        
+                                                                                                                                                                                                                              - name: Run brief
+                                                                                                                                                                                                                                      if: steps.gate.outputs.run == 'true'
+                                                                                                                                                                                                                                              env:
+                                                                                                                                                                                                                                                        EMAIL_TO: ${{ secrets.EMAIL_TO }}
+                                                                                                                                                                                                                                                                  EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+                                                                                                                                                                      id: gate
+                                                                                                                                                                              run: |
+                                                                                                                                                                                        FORCE="${{ github.event_name == 'workflow_dispatch' && inputs.force || false }}"
+                                                                                                                                                                                                  if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ steps.sent.outputs.cache-hit }}" = "true" ]; then
+                                                                                                                                                                                                              echo "run=false" >> "$GITHUB_OUTPUT"
+                                                                                                                                                                                                                          echo "Already emailed ${{ steps.day.outputs.d }} — skipping schedule duplicate"
+                                                                                                                                                                                                                                    elif [ "$FORCE" != "true" ] && [ "${{ steps.sent.outputs.cache-hit }}" = "true" ] && [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+                                                                                                                                                                                                                                                echo "run=false" >> "$GITHUB_OUTPUT"
+                                                                                                                                                                                                                                                            echo "Already emailed today — pass force=true to resend"
+                                                                                                                                                                                                                                                                      else
+                                                                                                                                                                                                                                                                                  echo "run=true" >> "$GITHUB_OUTPUT"
+                                                                                                                                                                                                                                                                                            fi
+                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                            
