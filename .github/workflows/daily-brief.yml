@@ -40,6 +40,7 @@ jobs:
         id: gate
         run: |
           FORCE="${{ github.event_name == 'workflow_dispatch' && inputs.force || false }}"
+
           if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ steps.sent.outputs.cache-hit }}" = "true" ]; then
             echo "run=false" >> "$GITHUB_OUTPUT"
             echo "Already emailed ${{ steps.day.outputs.d }} — skipping schedule duplicate"
@@ -67,6 +68,7 @@ jobs:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: python main.py --force
+
 
       - name: Mark sent today
         if: steps.gate.outputs.run == 'true'
